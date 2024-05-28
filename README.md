@@ -2,11 +2,12 @@
 
 
 ## Azure CLI general help
-    ```
-        az find "az group create --tags" (find most populer commands that has "___")
-        OR
-        az group create --help (if you already know the command)
-    ```
+
+```
+az find "az group create --tags" (find most populer commands that has "___")
+    OR
+az group create --help (if you already know the command)
+```
 
 ## Azure Resource group
 
