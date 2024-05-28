@@ -73,6 +73,7 @@ az group create --help (if you already know the command)
     ```
     az webapp list --output table
     ```
+    
 5. **Checking** the web app. The `DefaultHostName` can also be found from the above command. (default html from the sample app)
 
     ```
@@ -80,7 +81,6 @@ az group create --help (if you already know the command)
     ```
 
 6. **Deploying** code from **Github**.
-
 
     ```
     $GITHUB_URL = "https://github.com/Azure-Samples/php-docs-hello-world"
