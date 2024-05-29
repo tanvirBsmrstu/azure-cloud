@@ -114,7 +114,7 @@
 A storage account is a container that groups a set of Azure Storage services together. Only data services from Azure Storage can be included in a storage account (Azure Blobs, Azure Files, Azure Queues, and Azure Tables). See details on [storage account type and parameters](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-create?tabs=azure-cli#storage-account-type-parameters).
 
 
-<div class="style-custom-note">
+<div style="background-color: #dbc18c; border-left: 15px solid #2196F3; padding: 10px; color: #000000; font-style: italic;">
  <strong>Remember</strong> that the name of your storage account must be <strong>unique across Azure</strong>; since it is being used in the URL
 </div>
 
@@ -167,16 +167,3 @@ A storage account is a container that groups a set of Azure Storage services tog
 ### Usefull links
 
 - [Markdown Guide](https://www.markdownguide.org)
-
-
-
-
-<style>
-.style-custom-note {
-    background-color: #dbc18c;
-    border-left: 15px solid #2196F3;
-    padding: 10px;
-    color: #000000;
-    font-style: italic;
-}
-</style>
