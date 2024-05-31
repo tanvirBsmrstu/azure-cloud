@@ -248,8 +248,160 @@ Running a database in multiple regions worldwide increases the availability of a
 
 
 
+## Azure Container Registry (ACR)
+
+1. **Creating** an Azure Container Registry
+
+    ```bash
+    $AZ_ACR_NAME = "az204-container-registry"
+
+    az acr create --resource-group $RESOURCE_GROUP \
+                  --name $AZ_ACR_NAME \
+                  --sku Basic
+    ```
+
+2. **Building** image, after the image is successfully built, pushes it to your registry. Using the familiar `docker build` format, the `az acr build` command in the Azure CLI takes a context (the set of files to build), sends it to ACR Tasks and, by default, pushes the built image to its registry upon completion.
+
+    Execute the command from `Dockerfile` directory.
+
+    ```bash
+    $IMAGE_NAME = "sample/hello-world"
+    $IMAGE_NAME_WITH_TAG = "$IMAGE_NAME:v1"
+
+    az acr build --image $IMAGE_NAME_WITH_TAG \
+                 --registry $AZ_ACR_NAME \
+                 --file Dockerfile .
+    ```
+
+3. **Verifying** the results.
+
+    ```bash
+    az acr repository list --name $AZ_ACR_NAME --output table
+        
+        OR see all the tags of an image
+
+    az acr repository show-tags --name $AZ_ACR_NAME \
+                                --repository $IMAGE_NAME \
+                                --output table    
+    ```
+
+4. **Running** the container image from the container registry. The following example uses `$Registry` to specify the registry where you run the command. 
+
+    The `cmd` parameter in this example runs the container in its default configuration, but `cmd` supports other docker run parameters or even other docker commands. ( [Reference](https://learn.microsoft.com/en-us/training/modules/publish-container-image-to-azure-container-registry/6-build-run-image-azure-container-registry) )
+
+    ```bash
+    az acr run --registry $AZ_ACR_NAME \
+               --cmd '$Registry/$IMAGE_NAME_WITH_TAG' /dev/null
+    ```
+
+### Azure Container Instances (ACI)
+
+1. **Creating** unique DNS name to expose the container to the internet, and then the ACI. There are three restart policies `Always`, `Never`, `OnFailure`. The default is `Always`. These can be specified with `--restart-policy` parameter.
+
+    ```bash
+    $DNS_NAME_LABEL = "aci-example-$RANDOM"
+    $AZURE_CONTAINER_NAME = "az204-container"
+    $IMAGE_TO_RUN = "$Registry/$IMAGE_NAME_WITH_TAG"
+
+    az container create --resource-group $RESOURCE_GROUP \
+                        --name $AZURE_CONTAINER_NAME \
+                        --image $IMAGE_TO_RUN \
+                        --ports 80 \
+                        --dns-name-label $DNS_NAME_LABEL \
+                        --location $AZURE_REGION
+    ```
+
+    Environment variable can be passed to the container with `--environment-variables` parameter, such as `--environment-variables "NumWords"="5" "MinLength"="8"`.
+
+    Set a secure environment variable by specifying the `secureValue` property instead of the regular `value` for the variable's type. The two variables defined in the following YAML demonstrate the two variable types. ([Reference](https://learn.microsoft.com/en-us/training/modules/create-run-container-images-azure-container-instances/5-set-environment-variables-azure-container-instances))
+
+    ```yaml
+    apiVersion: 2018-10-01
+    location: eastus
+    name: securetest
+    properties:
+    containers:
+    - name: mycontainer
+        properties:
+        environmentVariables:
+            - name: 'NOTSECRET'
+            value: 'my-exposed-value'
+            - name: 'SECRET'
+            secureValue: 'my-secret-value'
+        image: nginx
+        ports: []
+        resources:
+            requests:
+            cpu: 1.0
+            memoryInGB: 1.5
+    osType: Linux
+    restartPolicy: Always
+    tags: null
+    type: Microsoft.ContainerInstance/containerGroups
+    ```
+    You would run the following command to deploy the container group with YAML:
+
+    ```bash
+    az container create --resource-group $RESOURCE_GROUP \
+                        --file secure-env.yaml 
+    ```
+
+    Mounting volume to the container.  [Reference](https://learn.microsoft.com/en-us/training/modules/create-run-container-images-azure-container-instances/6-mount-azure-file-share-azure-container-instances)
+
+    ```bash
+    --azure-file-volume-account-name $ACI_PERS_STORAGE_ACCOUNT_NAME \
+    --azure-file-volume-account-key $STORAGE_KEY \
+    --azure-file-volume-share-name $ACI_PERS_SHARE_NAME \
+    --azure-file-volume-mount-path /aci/logs/
+    ```
+
+    OR with the yaml file.
+
+    ```yaml
+    apiVersion: '2019-12-01'
+    location: eastus
+    name: file-share-demo
+    properties:
+    containers:
+    - name: hellofiles
+        properties:
+        environmentVariables: []
+        image: mcr.microsoft.com/azuredocs/aci-hellofiles
+        ports:
+        - port: 80
+        resources:
+            requests:
+            cpu: 1.0
+            memoryInGB: 1.5
+        volumeMounts:
+        - mountPath: /aci/logs/
+            name: filesharevolume
+    osType: Linux
+    restartPolicy: Always
+    ipAddress:
+        type: Public
+        ports:
+        - port: 80
+        dnsNameLabel: aci-demo
+    volumes:
+    - name: filesharevolume
+        azureFile:
+        sharename: acishare
+        storageAccountName: <Storage account name>
+        storageAccountKey: <Storage account key>
+    tags: {}
+    type: Microsoft.ContainerInstance/containerGroups
+    ```
 
 
+2. **Verify** the container is running.
+
+    ```bash
+    az container show --resource-group $RESOURCE_GROUP \
+                      --name $AZURE_CONTAINER_NAME \
+                      --query "{FQDN:ipAddress.fqdn,ProvisioningState:provisioningState}" \
+                      --out table
+    ```
 
 
 
