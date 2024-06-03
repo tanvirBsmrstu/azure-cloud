@@ -406,11 +406,116 @@ Running a database in multiple regions worldwide increases the availability of a
 
 
 
+### Shared-Access-Signature (SAS token) [ policy based SAS token ]
+
+1. Creating a policy
+
+    ```bash
+    $SAS_POLICY_NAME = "az204-sas-policy"
+    $SAS_POLICY_PERMISSIONS = "rw" # <(a)dd, (c)reate, (d)elete, (l)ist, (r)ead, or (w)rite>
+
+    az storage container policy create --name $SAS_POLICY_NAME \
+                                       --container-name <container name> \
+                                       --start <start time UTC datetime> \
+                                       --expiry <expiry time UTC datetime> \
+                                       --permissions $SAS_POLICY_PERMISSIONS \
+                                       --account-key <storage account key> \
+                                       --account-name <storage account name> 
+    ```
 
 
 
+### Azure Key Vault
 
+1. **Creating** a key vault.
 
+    ```bash
+    $AZURE_KEY_VAULT_NAME = "az204-keyvault"
+
+    az keyvault create --name $AZURE_KEY_VAULT_NAME \
+                       --resource-group $RESOURCE_GROUP \
+                       --location $AZURE_REGION
+    ```
+2. **Adding and Retrieveing** a secret
+
+    ```bash
+    az keyvault secret set --vault-name $AZURE_KEY_VAULT_NAME \
+                           --name "ExamplePassword" \
+                           --value "hVFkk965BuUv"
+
+    az keyvault secret show --name "ExamplePassword" \
+                            --vault-name $AZURE_KEY_VAULT_NAME
+    ```
+
+### Managed Identities [Reference](https://learn.microsoft.com/en-us/training/modules/implement-managed-identities/4-configure-managed-identities)
+
+1. **System-assigned managed identity**
+
+    1. Enable system-assigned managed identity during creation of an Azure virtual machine
+
+        ```bash
+        $VM_NAME = "myVM"
+
+        az vm create --resource-group $RESOURCE_GROUP \ 
+                    --name $VM_NAME --image win2016datacenter \ 
+                    --generate-ssh-keys \ 
+                    --assign-identity \ 
+                    --role contributor \
+                    --scope mySubscription \
+                    --admin-username azureuser \ 
+                    --admin-password myPassword12
+        ```
+
+    2. Enable system-assigned managed identity on an existing Azure virtual machine
+
+        ```bash
+        az vm identity assign -g $RESOURCE_GROUP -n $VM_NAME
+        ```
+    3. Similarly, assign to **Azure App Configuration store** [Reference](https://learn.microsoft.com/en-us/training/modules/implement-azure-app-configuration/5-secure-app-configuration-data)
+
+        ```bash
+        $APP_CONFIG_STORE_NAME = "myTestAppConfigStore"
+
+        az appconfig identity assign --resource-group $RESOURCE_GROUP \
+                                     --name  $APP_CONFIG_STORE_NAME
+        ```
+
+2. **User-assigned identity**
+
+    1. Create a user-assigned identity
+
+        ```bash
+        $USER_ASSIGNED_IDENTITY_NAME = "myUserAssignedIdentity"
+
+        az identity create -g $RESOURCE_GROUP -n $USER_ASSIGNED_IDENTITY_NAME
+        ```
+
+    2. Assign a user-assigned managed identity during the creation of an Azure virtual machine
+
+        ```bash
+        az vm create    --resource-group $RESOURCE_GROUP \
+                        --name $VM_NAME \
+                        --image Ubuntu2204 \
+                        --admin-username <USER NAME> \
+                        --admin-password <PASSWORD> \
+                        --assign-identity $USER_ASSIGNED_IDENTITY_NAME \
+                        --role <ROLE> \
+                        --scope <SUBSCRIPTION>
+        ```
+
+    3. Assign a user-assigned managed identity to an existing Azure virtual machine
+
+        ```bash
+        az vm identity assign -g $RESOURCE_GROUP -n $VM_NAME --identities $USER_ASSIGNED_IDENTITY_NAME
+        ```
+
+    4. Similarly, assign to **Azure App Configuration store** [Reference](https://learn.microsoft.com/en-us/training/modules/implement-azure-app-configuration/5-secure-app-configuration-data)
+
+        ```bash
+        az appconfig identity assign -name $APP_CONFIG_STORE_NAME \
+                                     --resource-group $RESOURCE_GROUP \
+                                     --identities $USER_ASSIGNED_IDENTITY_NAME
+        ```
 
 
 
