@@ -517,7 +517,21 @@ Running a database in multiple regions worldwide increases the availability of a
                                      --identities $USER_ASSIGNED_IDENTITY_NAME
         ```
 
+### API Management
 
+1. **Creating** an API management instance. [Reference](https://learn.microsoft.com/en-us/training/modules/explore-api-management/8-exercise-import-api)
+
+    ```bash
+    $PUBLISHER_EMAIL = "tanvirh03@gmail.com"
+    $API_MANAGEMENT_NAME = "az-204-apim"
+
+    az apim create  --name $API_MANAGEMENT_NAME \
+                    --location $AZURE_REGION \
+                    --publisher-email $PUBLISHER_EMAIL  \
+                    --resource-group $RESOURCE_GROUP \
+                    --publisher-name AZ204-APIM-Exercise \
+                    --sku-name Developer
+    ```
 
 
 ### Usefull links
