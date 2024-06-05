@@ -533,6 +533,135 @@ Running a database in multiple regions worldwide increases the availability of a
                     --sku-name Developer
     ```
 
+## Event-based solutions
+
+### Azure Event Grid
+
+1. **Registering** an Event Grid resource provider. [Reference](https://learn.microsoft.com/en-us/training/modules/azure-event-grid/8-event-grid-custom-events)
+    <div style="background-color: #dbc18c; border-left: 15px solid #2196F3; padding: 10px; color: #000000; font-style: italic;">
+    <strong>Note</strong> This step is only needed on subscriptions that haven't previously used Event Grid.
+    </div>
+
+    ```bash
+    az provider register --namespace Microsoft.EventGrid
+    ```
+    To check the status run the following command.
+    ```bash
+    az provider show --namespace Microsoft.EventGrid --query "registrationState"
+    ```
+
+2. **Creating** custom Topic. The name must be **unique** because it's part of the DNS entry
+
+    ```bash
+    $EVENT_GRID_CUSTOM_TOPIC_NAME = "az204-event-grid-custom-topic"
+
+    az eventgrid topic create --name $EVENT_GRID_CUSTOM_TOPIC_NAME \
+                              --location $AZURE_REGION \
+                              --resource-group $RESOURCE_GROUP
+    ```
+
+3. **Creating** a message endpoint. Before subscribing to the custom topic, we need to create the endpoint for the event message. Typically, the endpoint takes actions based on the event data. The following script uses a prebuilt web app that displays the event messages. The deployed solution includes an App Service plan, an App Service web app, and source code from GitHub.
+
+    ```bash
+    $mySiteName="az204-egsite"
+    $mySiteURL="https://${mySiteName}.azurewebsites.net"
+
+    az deployment group create --resource-group $RESOURCE_GROUP \
+                               --template-uri "https://raw.githubusercontent.com/Azure-Samples/azure-event-grid-viewer/main/azuredeploy.json" \
+                               --parameters siteName=$mySiteName hostingPlanName=viewerhost
+
+    echo "Your web app URL: ${mySiteURL}"
+    ```
+
+4. **Subscribing** to a custom topic.
+
+    ```bash
+    endpoint="${mySiteURL}/api/updates"
+    subId=$(az account show --subscription "" | jq -r '.id')
+    sourceResourceID="/subscriptions/$subId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.EventGrid/topics/$EVENT_GRID_CUSTOM_TOPIC_NAME"
+
+    $EVENT_SUBSCRIPTION_NAME = "az204ViewerSub"
+    
+    az eventgrid event-subscription create --name $EVENT_SUBSCRIPTION_NAME \
+                                           --source-resource-id $sourceResourceID \
+                                           --endpoint $endpoint
+    ```
+
+    View your web app again, and notice that a subscription validation event has been sent to it.
+
+    OR [with retry policy](https://learn.microsoft.com/en-us/training/modules/azure-event-grid/4-event-grid-delivery-retry)
+
+    ```bash
+    az eventgrid event-subscription create --name $EVENT_SUBSCRIPTION_NAME \
+                                           --topic-name $EVENT_GRID_CUSTOM_TOPIC_NAME \
+                                           --resource-group $RESOURCE_GROUP \
+                                           --endpoint $endpoint \
+                                           --max-delivery-attempts 18
+    ```
+
+5. **Sending** an event to your custom topic
+
+    ```bash
+    topicEndpoint=$(az eventgrid topic show --name $EVENT_GRID_CUSTOM_TOPIC_NAME -g $RESOURCE_GROUP --query "endpoint" --output tsv)
+    key=$(az eventgrid topic key list --name $EVENT_GRID_CUSTOM_TOPIC_NAME -g $RESOURCE_GROUP --query "key1" --output tsv)
+
+    event='[ {"id": "'"$RANDOM"'", "eventType": "recordInserted", "subject": "myapp/vehicles/motorcycles", "eventTime": "'`date +%Y-%m-%dT%H:%M:%S%z`'", "data":{ "make": "Contoso", "model": "Northwind"},"dataVersion": "1.0"} ]'
+
+    curl -X POST -H "aeg-sas-key: $key" -d "$event" $topicEndpoint
+    ```
+
+Another option is [Azure Event Hubs](https://learn.microsoft.com/en-us/training/modules/azure-event-hubs/6-event-hubs-programming-guide).
+
+## Message-based solution
+
+### Azure Service BUS [Reference](https://learn.microsoft.com/en-us/training/modules/discover-azure-message-queue/6-send-receive-messages-service-bus)
+
+1. **Creating** a Service Bus namespace
+
+    ```bash
+    $SERVICE_BUS_NAMESPACE_NAME = "az204-service-bus-namespace"
+
+    az servicebus namespace create --name $SERVICE_BUS_NAMESPACE_NAME \
+                                   --resource-group $RESOURCE_GROUP \
+                                   --location $AZURE_REGION
+    ```
+
+2. **Creating** a Service Bus queue
+
+    ```bash
+    $SERVICE_BUS_QUEUE_NAME = "az204-service-bus-queue"
+    
+    az servicebus queue create --name $SERVICE_BUS_QUEUE_NAME \
+                               --namespace-name $SERVICE_BUS_NAMESPACE_NAME \
+                               --resource-group $RESOURCE_GROUP \
+    ```
+
+Another option is [Azure Queue Storage](https://learn.microsoft.com/en-us/training/modules/discover-azure-message-queue/8-queue-storage-code-examples)
+
+## Implement Caching
+
+### Azure Redis Cache
+
+1. **Creating** Redis cache. The name has to be **unique** in the Azure. [Reference](https://learn.microsoft.com/en-us/training/modules/develop-for-azure-cache-for-redis/5-console-app-azure-cache-redis)
+
+    ```bash
+    $REDIS_CACHE_NAME = "az204-redis"
+    az redis create --name $redisName \
+                    --location $AZURE_REGION \
+                    --resource-group $RESOURCE_GROUP \
+                    --sku Basic --vm-size c0
+    ```
+
+### Azure  content delivery network (CDN)
+
+A content delivery network (CDN) is a distributed network of servers that can efficiently deliver web content to users. [Reference](https://learn.microsoft.com/en-us/training/modules/develop-for-storage-cdns/3-control-cache-behavior)
+
+
+
+
+
+
+
 
 ### Usefull links
 
