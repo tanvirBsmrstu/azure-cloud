@@ -48,7 +48,7 @@
 3. **Finding** a resource group using the `--query` parameter
 
     ```bash
-    az group list --query "[?name == '$resourceGroupName']"
+    az group list --query "[?name == '$RESOURCE_GROUP']"
     ```
 4. **Deleting** a resource group with all the other services it has
 
