@@ -51,7 +51,13 @@
     az group list --query "[?name == '$RESOURCE_GROUP']"
     ```
 
-4. **Deleting** a resource group with all the other services it has
+4. **Finding all resources** under a resource group.
+
+    ```bash
+    az resource list --resource-group $RESOURCE_GROUP
+    ```
+
+5. **Deleting** a resource group with all the other services it has
 
     ```bash
     az group delete --name $RESOURCE_GROUP --no-wait
