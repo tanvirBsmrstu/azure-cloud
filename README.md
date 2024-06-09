@@ -50,20 +50,26 @@
     ```bash
     az group list --query "[?name == '$RESOURCE_GROUP']"
     ```
+
 4. **Deleting** a resource group with all the other services it has
 
     ```bash
     az group delete --name $RESOURCE_GROUP --no-wait
     ```
 
-## App Service plan
+## Azure VMs
+
+- [Availability Set, Update domain, fault domain](https://learn.microsoft.com/en-us/azure/virtual-machines/availability-set-overview)
+
+
+## App Service plan & Web app
 
 1. **Creating** an app service plan
 
     ```bash
-    $AZURE_APP_PLAN = "az204_appservice_plan"
+    $APP_SERVICE_PLAN_NAME = "az204_appservice_plan"
 
-    az appservice plan create   --name $AZURE_APP_PLAN \
+    az appservice plan create   --name $APP_SERVICE_PLAN_NAME \
                                 --resource-group $RESOURCE_GROUP \
                                 --location $AZURE_REGION \
                                 --sku FREE
@@ -80,7 +86,7 @@
     ```bash
     az appservice plan create --help
 
-    az webapp create --name $AZURE_WEB_APP --resource-group $RESOURCE_GROUP --plan $AZURE_APP_PLAN
+    az webapp create --name $AZURE_WEB_APP --resource-group $RESOURCE_GROUP --plan $APP_SERVICE_PLAN_NAME
     ```
 
 4. **Listing** all web apps
@@ -112,6 +118,14 @@
 
 7. **Retesting** deployed code. Do the same query as step `5`. New deployed changes should be in action.
 
+#### Usefull links
+
+- [Accessing KeyValut from Web App](https://learn.microsoft.com/en-us/samples/azure-samples/app-service-msi-keyvault-dotnet/keyvault-msi-appservice-sample/)
+
+
+## Azure Functions
+
+- [Send Email from Azure functions using SendGrid](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-sendgrid?tabs=in-process%2Cfunctionsv2&pivots=programming-language-csharp)
 
 
 ## Azure Storage Account
@@ -516,6 +530,10 @@ Running a database in multiple regions worldwide increases the availability of a
                                      --resource-group $RESOURCE_GROUP \
                                      --identities $USER_ASSIGNED_IDENTITY_NAME
         ```
+
+#### Usefull links
+- [OAath 2.0](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow)
+
 
 ### API Management
 
