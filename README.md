@@ -92,7 +92,9 @@
     ```bash
     az appservice plan create --help
 
-    az webapp create --name $AZURE_WEB_APP --resource-group $RESOURCE_GROUP --plan $APP_SERVICE_PLAN_NAME
+    $AZ_WEB_APP_NAME="ecoshop-007-webapp"
+
+    az webapp create --name $AZ_WEB_APP_NAME --resource-group $RESOURCE_GROUP --plan $APP_SERVICE_PLAN_NAME
     ```
 
 4. **Listing** all web apps
@@ -104,7 +106,7 @@
 5. **Checking** the web app. The `DefaultHostName` can also be found from the above command. (default html from the sample app)
 
     ```bash
-    curl $AZURE_WEB_APP.azurewebsites.net
+    curl $AZ_WEB_APP_NAME.azurewebsites.net
     ```
 
 6. **Deploying** code from **Github**.
@@ -115,7 +117,7 @@
 
     az webapp deployment source config --help
 
-    az webapp deployment source config  --name $AZURE_WEB_APP \
+    az webapp deployment source config  --name $AZ_WEB_APP_NAME \
                                         --resource-group $RESOURCE_GROUP \
                                         --repo-url $GITHUB_URL \
                                         --branch $GITHUB_BRANCH \
