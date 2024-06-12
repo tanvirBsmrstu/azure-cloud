@@ -57,7 +57,7 @@
     az resource list --resource-group $RESOURCE_GROUP
     ```
 
-5. **Deleting** a resource group with all the other services it has
+4. **Deleting** a resource group with all the other services it has
 
     ```bash
     az group delete --name $RESOURCE_GROUP --no-wait
@@ -69,6 +69,7 @@
 
 
 ## App Service plan & Web app
+
 
 1. **Creating** an app service plan
 
@@ -126,6 +127,7 @@
 
 7. **Retesting** deployed code. Do the same query as step `5`. New deployed changes should be in action.
 
+
 #### Usefull links
 
 - [Accessing KeyValut from Web App](https://learn.microsoft.com/en-us/samples/azure-samples/app-service-msi-keyvault-dotnet/keyvault-msi-appservice-sample/)
@@ -134,6 +136,7 @@
 ## Azure Functions
 
 - [Send Email from Azure functions using SendGrid](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-sendgrid?tabs=in-process%2Cfunctionsv2&pivots=programming-language-csharp)
+
 
 
 ## Azure Storage Account
