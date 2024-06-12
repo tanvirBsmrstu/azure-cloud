@@ -675,7 +675,7 @@ Another option is [Azure Queue Storage](https://learn.microsoft.com/en-us/traini
 
     ```bash
     $REDIS_CACHE_NAME = "az204-redis"
-    az redis create --name $redisName \
+    az redis create --name $REDIS_CACHE_NAME \
                     --location $AZURE_REGION \
                     --resource-group $RESOURCE_GROUP \
                     --sku Basic --vm-size c0
