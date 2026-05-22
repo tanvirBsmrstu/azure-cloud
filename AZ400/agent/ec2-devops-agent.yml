@@ -1,13 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: EC2 Self-Hosted Azure DevOps Agent with Docker, AZ CLI, PowerShell
+Description: EC2 Self-Hosted Azure DevOps Agent (AZ400 with dedicated VPC)
 
 Parameters:
 
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
-
-  MyIP:
-    Type: String
 
   DevOpsUrl:
     Type: String
@@ -22,103 +19,167 @@ Parameters:
 
 Resources:
 
+# ✅ VPC
+  DevOpsVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: DevOps-VPC
+        - Key: Project
+          Value: az400
+
+# ✅ Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Project
+          Value: az400
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref DevOpsVPC
+      InternetGatewayId: !Ref InternetGateway
+
+# ✅ Public Subnet
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref DevOpsVPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: DevOps-Public-Subnet
+        - Key: Project
+          Value: az400
+
+# ✅ Route Table
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref DevOpsVPC
+      Tags:
+        - Key: Project
+          Value: az400
+
+# ✅ Route to Internet
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+# ✅ Associate subnet with route table
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+# ✅ Security Group
   DevOpsSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow SSH access
+      GroupDescription: Allow SSH from anywhere (DEV ONLY)
+      VpcId: !Ref DevOpsVPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: !Ref MyIP
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: DevOps-SG
+        - Key: Project
+          Value: az400
 
+# ✅ EC2 Instance
   DevOpsInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
       KeyName: !Ref KeyName
-      ImageId: ami-0fc5d935ebf8bc3bc   # change if using eu-central-1
+      SubnetId: !Ref PublicSubnet
+      ImageId: ami-0b3a21dbff1fffb4c
+
       SecurityGroupIds:
         - !Ref DevOpsSecurityGroup
 
       Tags:
         - Key: Name
           Value: DevOps-Agent
+        - Key: Project
+          Value: az400
 
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          set -e
+          set -euo pipefail
+          exec > /var/log/user-data.log 2>&1
 
           echo "=== SYSTEM UPDATE ==="
-          apt-get update -y
-          apt-get upgrade -y
+          apt-get update -y -qq
+          apt-get upgrade -y -qq
 
           echo "=== INSTALL BASIC TOOLS ==="
-          apt-get install -y curl git unzip apt-transport-https ca-certificates software-properties-common
-
-          echo "=== INSTALL DOCKER ==="
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker.gpg
-
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker.gpg] \
-            https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-            > /etc/apt/sources.list.d/docker.list
-
-          apt-get update -y
-          apt-get install -y docker-ce docker-ce-cli containerd.io
-
-          systemctl enable docker
-          systemctl start docker
-
-          usermod -aG docker ubuntu
+          apt-get install -y -qq curl git unzip ca-certificates apt-transport-https software-properties-common
 
           echo "=== INSTALL AZURE CLI ==="
           curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
           echo "=== INSTALL POWERSHELL ==="
-          wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
+          wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
           dpkg -i packages-microsoft-prod.deb
-          apt-get update -y
-          apt-get install -y powershell
+          apt-get update -y -qq
+          apt-get install -y -qq powershell
 
-          echo "=== INSTALL .NET SDK ==="
-          wget https://dot.net/v1/dotnet-install.sh
-          chmod +x dotnet-install.sh
-          ./dotnet-install.sh --channel 8.0
+          echo "=== INSTALL .NET SDK 8 ==="
+          apt-get install -y -qq dotnet-sdk-8.0
 
-          echo 'export PATH=$PATH:$HOME/.dotnet' >> /etc/profile
+          ############################################
 
-          echo "=== INSTALL AZURE DEVOPS AGENT ==="
-          mkdir -p /opt/azagent
-          cd /opt/azagent
+          echo "=== Add AZAGENT USER ==="
+          useradd -m -d /home/azagent -s /bin/bash azagent
+          sudo -u azagent -H bash -c "
+              mkdir -p ~/myagent
+              cd ~/myagent
 
-          curl -O https://vstsagentpackage.azureedge.net/agent/3.236.1/vsts-agent-linux-x64-3.236.1.tar.gz
-          tar zxvf vsts-agent-linux-x64-3.236.1.tar.gz
+              echo '=== INSTALL AZURE DEVOPS AGENT ===' \$PWD
+              curl -sSL -O https://download.agent.dev.azure.com/agent/4.273.0/vsts-agent-linux-x64-4.273.0.tar.gz
+              tar zxf vsts-agent-linux-x64-4.273.0.tar.gz
 
-          useradd -m azagentuser || true
-          chown -R azagentuser:azagentuser /opt/azagent
-
-          su - azagentuser -c "
-            cd /opt/azagent
-
-            ./config.sh --unattended \
-              --url '${DevOpsUrl}' \
-              --auth pat \
-              --token '${DevOpsPat}' \
-              --pool '${AgentPool}' \
-              --agent 'ec2-agent-$(hostname)' \
-              --acceptTeeEula \
-              --runAsService
+              ./config.sh --unattended \
+                --url '${DevOpsUrl}' \
+                --auth pat \
+                --token '${DevOpsPat}' \
+                --pool '${AgentPool}' \
+                --agent 'ec2-agent-linux' \
+                --acceptTeeEula \
+                --runAsService
+              echo '=== DEVOPS AGENT CONFIG COMPLETE ==='
           "
 
-          /opt/azagent/svc.sh install
-          /opt/azagent/svc.sh start
+          # run as root (no sudo needed)
+          cd /home/azagent/myagent
+          ./svc.sh install
+          ./svc.sh start
+          echo '=== DEVOPS AGENT SERVICE REGISTRATION COMPLETE ==='
+
 
 Outputs:
 
   PublicIP:
+    Description: EC2 Public IP
     Value: !GetAtt DevOpsInstance.PublicIp
