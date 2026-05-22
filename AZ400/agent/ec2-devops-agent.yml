@@ -109,7 +109,7 @@ Resources:
   DevOpsInstance:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t3.micro
+      InstanceType: t2.micro
       KeyName: !Ref KeyName
       SubnetId: !Ref PublicSubnet
       ImageId: ami-0b3a21dbff1fffb4c
